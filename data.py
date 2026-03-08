@@ -1,9 +1,10 @@
-import pandas as pd
+import pandas as pd # type: ignore
 import numpy as np
 
 class MarineEnvironment:
-    def __init__(self, length=100, width=100, res_x=40, res_y=40, seed=None):
+    def __init__(self, length=100, width=100, res_x=50, res_y=50, seed=None):
         """Initialise la grille cartésienne (le couloir de jeu)."""
+
         x = np.linspace(0, length, res_x)
         y = np.linspace(-width/2, width/2, res_y)
         xv, yv = np.meshgrid(x, y)
@@ -19,11 +20,8 @@ class MarineEnvironment:
         self.base_phase2 = np.random.uniform(0, 50, 2)
 
     def get_wind_at_time(self, time=0):
-        """Génère le champ de vent à un instant t donné."""
-        # Évolution temporelle des phases : dérive lente et réaliste
-        # Les phases évoluent selon des fréquences temporelles différentes
-        temporal_freq_1 = 0.002  # Fréquence lente (période ~125 unités de temps)
-        temporal_freq_2 = 0.014  # Fréquence plus lente (période ~210 unités de temps)
+        temporal_freq_1 = 0.008  # Fréquence lente (période ~125 unités de temps)
+        temporal_freq_2 = 0.056  # Fréquence plus lente (période ~210 unités de temps)
 
         # Phases évoluent continuellement dans le temps
         ph1 = self.base_phase1 + np.array([
@@ -55,7 +53,12 @@ class MarineEnvironment:
             'wind_dir': direction % 360,
             'time': time
         })
-
-    def generate_random_coherent_wind(self, seed=None):
-        """Génère un champ de vent procédural (Perlin noise-like) cohérent. (Alias pour compatibilité)"""
-        return self.get_wind_at_time(time=0)
+    def get_boat_position(self, x, y, t):
+        print(f"Calculating boat position for time {t} with input coordinates ({x}, {y})")
+        df_t = self.get_wind_at_time(t)
+        distances = np.sqrt((df_t['x'] - x)**2 + (df_t['y'] - y)**2)
+        closest_node = df_t.iloc[distances.idxmin()]
+        speed, dir = closest_node['wind_speed'], closest_node['wind_dir']
+        x+=speed*np.cos(np.radians((270 - dir) % 360))
+        y+=speed*np.sin(np.radians((270 - dir) % 360))
+        return x, y
