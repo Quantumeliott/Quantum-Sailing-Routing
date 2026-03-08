@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
-from data import MarineEnvironment
-import matplotlib.patheffects as patheffects
 from matplotlib.patches import Polygon, Rectangle
 from matplotlib.widgets import Button
+from matplotlib.animation import FuncAnimation
+from dijkstra import dijkstra
 
 def interactive_windy_pro(env, time_max=150):
     # Setup du style sombre profond
@@ -15,26 +15,115 @@ def interactive_windy_pro(env, time_max=150):
     x_coords = np.sort(np.unique(env.points[:, 0]))
     y_coords = np.sort(np.unique(env.points[:, 1]))
     X, Y = np.meshgrid(x_coords, y_coords)
+    # Variables globales pour stocker les éléments du bateau
+    boat_patches = {'hull': None, 'sail': None}
+
+    def init_boat(x, y, a_b=0):
+        # On crée le bateau une seule fois avec un zorder élevé pour qu'il soit au-dessus du vent
+        boat_patches['hull'] = Polygon([[0,0], [0,0], [0,0]], closed=True, facecolor='black', zorder=10)
+        boat_patches['sail'] = Polygon([[0,0], [0,0], [0,0]], closed=True, facecolor='black', zorder=10)
+        ax.add_patch(boat_patches['hull'])
+        ax.add_patch(boat_patches['sail'])
+        update_boat(x, y, a_b)
+
+    def update_boat(x, y, a_b):
+        # Mise à jour des coordonnées de la coque
+        hull_coords = [
+            (x, y),
+            (x + 3*np.cos(a_b+0.3), y + 3*np.sin(a_b+0.3)),
+            (x + 3*np.cos(a_b-0.3), y + 3*np.sin(a_b-0.3))
+        ]
+        boat_patches['hull'].set_xy(hull_coords)
+
+        # Mise à jour des coordonnées de la voile
+        sail_coords = [
+            (x + np.cos(a_b), y + np.sin(a_b)),
+            (x + 2*np.cos(a_b+1.2), y + 2*np.sin(a_b+1.2)),
+            (x + 2*np.cos(a_b-1.2), y + 2*np.sin(a_b-1.2))
+        ]
+        boat_patches['sail'].set_xy(sail_coords)
+
+    global anim  
 
     def button():
         ax_answer = fig.add_axes([0.35, 0.10, 0.30, 0.05]) 
-
-        btn_answer = Button(ax_answer, 'Show the Answers', 
-                            color="#0A250F",      # Fond sombre
-                            hovercolor='#238636') # Vert au survol (type GitHub)
-
-        # Stylisation du texte
+        btn_answer = Button(ax_answer, 'Show the Answers', color="#0A250F", hovercolor='#238636')
         btn_answer.label.set_color('white')
         btn_answer.label.set_weight('bold')
         btn_answer.label.set_fontsize(10)
 
-        # 3. La fonction de callback
         def show_path(event):
-            title.set_text("OPTIMIZING PATH WITH QAOA...")
-            title.set_color('#58a6ff')
-            fig.canvas.draw_idle()
+            # 1. Retour visuel immédiat pour dire que ça calcule
+            title.set_text("CALCULATING PATH...")
+            title.set_color('#f1e05a') # Jaune
+            fig.canvas.draw()
+            fig.canvas.flush_events() # Force l'affichage avant que le calcul ne fige l'écran
+
+            # 2. On définit le départ (ton bateau) et l'arrivée (ta ligne d'arrivée)
+            # On utilise la fonction get_closest_node qu'on a créée pour la classe
+            start_node = env.get_node_index(x_b, y_b)
+            goal_node = env.get_node_index(90, 40) # Les coordonnées de ta finish line
+
+            # 3. ON LANCE A* DIRECTEMENT ICI !
+            chemin_noeuds, chemin_temps, temps_total = dijkstra(env)
+
+            # Sécurité si aucun chemin n'est trouvé
+            if temps_total == float('inf'):
+                title.set_text("NO ROUTE FOUND (WIND BLOCKED)")
+                title.set_color('#f85149') # Rouge
+                fig.canvas.draw()
+                return
+
+            # 4. On prépare la liste de waypoints pour l'animation
+            waypoints = []
+            for i in range(len(chemin_noeuds)):
+                x, y = env.points[chemin_noeuds[i]]
+                t = chemin_temps[i]
+                waypoints.append((x, y, t))
+
+            title.set_text("OPTIMIZING PATH WITH A*...")
+            title.set_color('#58a6ff') # Bleu
+            # Ligne pointillée bleue pour la trace du bateau
+            trail_line, = ax.plot([], [], color="#000000", linewidth=1.5, linestyle='-', alpha=0.8, zorder=5)
+            # 5. La sous-fonction d'animation
+            def animate(frame):
+                x, y, t = waypoints[frame]
+                # --- NOUVEAU : Mise à jour de la traînée ---
+                # On prend tous les x et y du départ jusqu'à l'image actuelle
+                trail_x = [wp[0] for wp in waypoints[:frame+1]]
+                trail_y = [wp[1] for wp in waypoints[:frame+1]]
+                trail_line.set_data(trail_x, trail_y)
+                # 1. Calcul de la vraie direction du mouvement
+                if frame < len(waypoints) - 1:
+                    nx, ny, _ = waypoints[frame + 1]
+                    angle_mouvement = np.arctan2(ny - y, nx - x)
+                elif frame > 0:
+                    px, py, _ = waypoints[frame - 1]
+                    angle_mouvement = np.arctan2(y - py, x - px)
+                else:
+                    angle_mouvement = 0
+
+                # 2. CORRECTION VISUELLE : On pivote le dessin de 180° (Pi radians)
+                angle_dessin = angle_mouvement + np.pi
+
+                # 3. On met à jour le dessin avec l'angle inversé
+                update_boat(x, y, angle_dessin)
+                
+                slider.set_val(t)
+                
+                if frame == len(waypoints) - 1:
+                    title.set_text(f"DESTINATION REACHED IN {int(t)}h ! ")
+                    title.set_color('#238636')
+                    
+                return boat_patches['hull'], boat_patches['sail'], trail_line
+
+            # 6. On lance l'animation
+            global anim
+            anim = FuncAnimation(fig, animate, frames=len(waypoints), interval=50, blit=False, repeat=False)
+            fig.canvas.draw()
 
         btn_answer.on_clicked(show_path)
+        fig.btn_answer = btn_answer
 
     def draw_scale_bar():
         ax_scale = fig.add_axes([0.05, 0.05, 0.15, 0.03], facecolor='none')
@@ -54,32 +143,17 @@ def interactive_windy_pro(env, time_max=150):
     x_b = 5
     y_b = -45
     a_b= 5*np.pi/4
+
     def finish_line():
         finish_width = 0.5
         finish_height = 10
-        rect = Rectangle((-finish_width/2, -finish_height/2),
+        rect = Rectangle((0, 0),
                         finish_width, finish_height,
                         facecolor='black', hatch='////', alpha=1)
         from matplotlib.transforms import Affine2D
         rot = Affine2D().rotate(np.pi/4).translate(90, 40)
         rect.set_transform(rot + ax.transData)
         ax.add_patch(rect)
-
-    def boat(x,y):
-        hull = Polygon([
-            (x, y),
-            (x + 3*np.cos(a_b+0.3), y + 3*np.sin(a_b+0.3)),
-            (x + 3*np.cos(a_b-0.3), y + 3*np.sin(a_b-0.3))
-        ], closed=True, facecolor='black')
-        ax.add_patch(hull)
-
-        # voile : triangle plus fin et tourné vers l’arrière
-        sail = Polygon([
-                (x + np.cos(a_b), y + np.sin(a_b)),
-                (x + 2*np.cos(a_b+1.2), y + 2*np.sin(a_b+1.2)),
-                (x + 2*np.cos(a_b-1.2), y + 2*np.sin(a_b-1.2))
-            ], closed=True, facecolor='black')
-        ax.add_patch(sail)
     
     step = 2  # Affiche 1 flèche sur 3 (divise par 9 le nombre de calculs)
     X_sub = X[::step, ::step]
@@ -137,8 +211,9 @@ def interactive_windy_pro(env, time_max=150):
         q.set_UVC(U_t, V_t)
         title.set_text(f"LIVE WIND FORECAST - {int(t)}h{int((t%1)*60):02d}")
         fig.canvas.draw_idle()
+
     heatmap_color()
     slider.on_changed(update)
-    boat(x_b, y_b)
+    init_boat(x_b, y_b, a_b)
     finish_line()
     plt.show()
