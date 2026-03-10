@@ -1,5 +1,6 @@
 import heapq
 import numpy as np
+import time
 
 def heuristic(env, node_idx, goal_idx, vmax=15.0):
     x1, y1 = env.points[node_idx]
@@ -8,10 +9,9 @@ def heuristic(env, node_idx, goal_idx, vmax=15.0):
     return distance / vmax
 
 def dijkstra(env, start_time=0.0):
-    start_idx= env.get_node_index(5,-45)
-    goal_idx= env.get_node_index(86.4,44.4)
-    print(f"Lancement de Dijkstra du point {start_idx} vers {goal_idx}...")
-    
+    start_idx= env.get_node_index(5,5)
+    goal_idx= env.get_node_index(83.7,96)
+    ti = time.time()
     # La file de priorité stocke : (temps_cumulé, index_noeud_actuel)
     start_h = heuristic(env, start_idx, goal_idx)
     pq = [(start_time + start_h, start_time, start_idx)]
@@ -29,7 +29,6 @@ def dijkstra(env, start_time=0.0):
         
         # Condition de victoire : on a atteint l'arrivée !
         if noeud_actuel == goal_idx:
-            print(f"Arrivée atteinte ! Noeuds explorés : {nodes_explored}")
             break
             
         # Si on a déjà trouvé un meilleur chemin pour ce noeud entre-temps, on ignore
@@ -78,5 +77,8 @@ def dijkstra(env, start_time=0.0):
     chemin_temps.reverse()
 
     temps_final = temps_min[goal_idx]
+    tf = time.time() - ti
+
+    print(f"Simulation terminée en {tf:.2f} secondes.")
 
     return chemin, chemin_temps, temps_final
