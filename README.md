@@ -17,7 +17,7 @@ Navigating a sailboat efficiently requires constantly adapting to dynamic wind f
 * **Replay Mode:** A time-slider allows users to review the race frame-by-frame and analyze algorithmic decision-making.
 
 ## Limits
-My goal was to optimize a maximum the QAOA so that he could compete with dijkstra but the limits of qubits is extremely restrictive. I had to choose to create graphs that 
+My goal was to optimize a maximum the QAOA so that he could compete with dijkstra but the limits of qubits is extremely restrictive. I had to choose to create graphs that had a large vision but were not precise at all (big segments), or graphs that were precise but could not anticipate a no-wind zone. The result is a mix between the two, the boat can escape front wind but often fall into the no-wind zone.
 
 ##  Getting Started
 
