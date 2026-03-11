@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from matplotlib.patches import Polygon, Rectangle
 from matplotlib.animation import FuncAnimation
-from dijkstra import dijkstra
-from qaoa import simulation
+from classic.dijkstra import dijkstra
+from quantique.qaoa import simulation
 from weather import get_wind_at_time
+from enigme import afficher_enigme
 
 def interactive_windy_pro(env, time_max=50):
     
@@ -84,7 +85,7 @@ def interactive_windy_pro(env, time_max=50):
         
         return curr_x, curr_y, idx, angle
     x_b, y_b = 5, 5
-    a_b = 5*np.pi/4
+    a_b = np.arctan2(96.0 - y_b, 83.7 - x_b) + np.pi
     
     def get_wind_vectors(t):
         df_t = get_wind_at_time(env, time=t).sort_values(by=['y', 'x'])
@@ -129,6 +130,8 @@ def interactive_windy_pro(env, time_max=50):
         btn_answer.label.set_fontsize(10)
 
         def show_path(event):
+            print("Simulation time : approximately 1-2 minutes ...")
+            answer = afficher_enigme()
             title.set_text("CALCULATING PATHS...")
             title.set_color('#f1e05a') 
             fig.canvas.draw()
@@ -180,6 +183,7 @@ def interactive_windy_pro(env, time_max=50):
                 if frame == num_frames - 1:
                     title.set_text(f" RÉSULTATS \n Dijkstra (Orange) h : {tfc:.1f} | QAOA (Bleu) : {tfq:.1f} h")
                     title.set_color("#ffffff")
+                    print(answer)
                     
                 else:
                     title.set_text(f"RACE IN PROGRESS - {int(current_t)}h{int((current_t%1)*60):02d}")

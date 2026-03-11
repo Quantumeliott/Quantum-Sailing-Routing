@@ -1,4 +1,4 @@
-from points import get_next_quantum_waypoint
+from quantique.next_point import get_next_quantum_waypoint
 import math
 import time 
 
@@ -8,8 +8,7 @@ def simulation(env):
     i= 0
     time_i = time.time()
     while math.hypot(83.7 - chemin[-1][0], 96 - chemin[-1][1]) > 0.5:
-        prochain_waypoint, t_next = get_next_quantum_waypoint(env, chemin[-1], cible_finale=(83.7, 96), backend='aer', t=time_register[-1])
-        
+        prochain_waypoint, t_next = get_next_quantum_waypoint(env, chemin[-1], cible_finale=(83.7, 96), t=time_register[-1])
         chemin.append(prochain_waypoint)
         time_register.append(t_next)
         

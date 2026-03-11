@@ -1,7 +1,5 @@
 import warnings
-# On coupe définitivement le bruit inutile
 warnings.filterwarnings("ignore")
-
 from qiskit.primitives import StatevectorSampler #type: ignore
 from qiskit import transpile #type: ignore
 from qiskit_algorithms import QAOA #type: ignore
@@ -18,10 +16,9 @@ class FastSampler(StatevectorSampler):
         new_pubs = []
         for pub in pubs:
             try:
-                # Qiskit envoie souvent les données sous forme de Tuple V2
                 if isinstance(pub, tuple):
                     circuit = pub[0]
-                    # LA MAGIE : On casse le gros bloc QAOA en petites portes super rapides
+                    # On casse le gros bloc QAOA en petites portes super rapides
                     fast_circ = transpile(circuit, basis_gates=['rz', 'sx', 'x', 'cx'])
                     new_pubs.append((fast_circ,) + pub[1:])
                 
@@ -42,20 +39,10 @@ class FastSampler(StatevectorSampler):
         return super().run(new_pubs, shots=shots)
 
 
-def resoudre_sur_aer(qubo_problem, reps=1, maxiter=70):
-    # 1. On utilise notre simulateur optimisé
+def resoudre_sur_aer(qubo_problem, reps=1, maxiter=40):
     simulateur = FastSampler()
-    
-    # 2. L'optimiseur (20 itérations c'est bien pour QAOA)
     optimiseur = COBYLA(maxiter=maxiter)
-    
-    # 3. La configuration QAOA (reps=1 pour commencer doucement)
     qaoa = QAOA(sampler=simulateur, optimizer=optimiseur, reps=reps)
-    
-    # 4. Le solveur avec pénalité
-    qaoa_optimizer = MinimumEigenOptimizer(qaoa, penalty=50.0)
-    
-    # 5. Calcul
+    qaoa_optimizer = MinimumEigenOptimizer(qaoa)
     resultat = qaoa_optimizer.solve(qubo_problem)
-    
     return resultat

@@ -1,6 +1,5 @@
 import pandas as pd # type: ignore
 import numpy as np
-import math
 from weather import get_wind_at_time
 
 class MarineEnvironment:
@@ -18,28 +17,27 @@ class MarineEnvironment:
             np.random.seed(seed)
         self.base_phase1 = np.random.uniform(0, 50, 2)
         self.base_phase2 = np.random.uniform(0, 50, 2)
-        
-        # --- NOUVEAUTÉ : Direction du vent de base aléatoire (entre 0 et 360°) ---
+
         self.base_wind_dir = np.random.uniform(0, 360)
     
 
     def boat_speed(self, angle_diff, wind_speed):
-        # 1. Normalisation de l'angle (toujours entre 0° de face et 180° de dos)
+
         angle_abs = np.abs(angle_diff) % 360
         if angle_abs > 180:
             angle_abs = 360 - angle_abs
             
         vmax = 15.0
-        if wind_speed < 15.0:
-            vitesse_potentielle = wind_speed * 0.6
-        else:
-            vitesse_potentielle = wind_speed * 0.3
-        vitesse_potentielle = min(vitesse_potentielle, vmax)
+        vitesse_potentielle = wind_speed * 0.6
+        vitesse_potentielle = min(vitesse_potentielle, vmax) 
+        
         if angle_abs >= 30.0:
             boat_s = vitesse_potentielle
         else:
-            facteur_chute = (angle_abs / 30.0)**10
-            boat_s = vitesse_potentielle * facteur_chute
+            facteur_chute = (angle_abs / 30.0)**5 
+
+            boat_s = max(0.1, vitesse_potentielle * facteur_chute)
+            
         return boat_s
 
     def get_travel_time(self, x1, y1, x2, y2, current_time):
@@ -66,7 +64,6 @@ class MarineEnvironment:
     def get_neighbors(self, index):
         neighbors = []
         
-        # On utilise les dimensions de l'objet (100x100) !
         y = index // self.res_x
         x = index % self.res_x
 
