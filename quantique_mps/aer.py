@@ -4,6 +4,7 @@ from scipy.optimize import minimize
 import mps_engine 
 
 def resoudre_sur_aer(qubo_problem, reps=1, maxiter=40, max_bond_dim=64):
+    
     # 1. Extraction des coefficients du Hamiltonien (QUBO)
     # On récupère les poids des arêtes du graphe pour le QAOA
     hamiltonian = qubo_problem.to_ising()
