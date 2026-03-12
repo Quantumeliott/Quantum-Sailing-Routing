@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import networkx as nx #type: ignore
-from quantique.next_point import generer_macro_graphe
+from quantique_mps.next_point import generer_macro_graphe
 import math 
 
 #class test
@@ -55,16 +55,16 @@ if __name__ == "__main__":
     pos3_depart = (5.0, 5.0) 
 
     pos_arrivee = (83.7, 96.0)
-    G4, coords4, cible4 = generer_macro_graphe(env_test, pos3_depart, pos_arrivee)
-    G3, coords3, cible3 = generer_macro_graphe(env_test, pos2_depart, pos_arrivee)
-    G1, coords1, cible1 = generer_macro_graphe(env_test, pos1_depart, pos_arrivee)
-    G2, coords2, cible2 = generer_macro_graphe(env_test, pos4_depart, pos_arrivee)
+    G4,d, coords4, cible4 = generer_macro_graphe(env_test, pos3_depart, pos_arrivee)
+    G3,c, coords3, cible3 = generer_macro_graphe(env_test, pos2_depart, pos_arrivee)
+    G1,b, coords1, cible1 = generer_macro_graphe(env_test, pos1_depart, pos_arrivee)
+    G2,a, coords2, cible2 = generer_macro_graphe(env_test, pos4_depart, pos_arrivee)
     fig, axes = plt.subplots(1, 4, figsize=(18, 6))
     
-    visualiser_graphe(axes[0], G4, coords4, cible4, " Départ Loin (15 Qubits)")
-    visualiser_graphe(axes[2], G3, coords3, cible3, "Départ au Milieu (13 Qubits)")
-    visualiser_graphe(axes[1], G2, coords2, cible2, "Départ au Milieu loin (13 Qubits)")
-    visualiser_graphe(axes[3], G1, coords1, cible1, "Départ Proche (6 Qubits)")
+    visualiser_graphe(axes[0], G4, coords4, cible4, " Départ Loin")
+    visualiser_graphe(axes[2], G3, coords3, cible3, "Départ au Milieu")
+    visualiser_graphe(axes[1], G2, coords2, cible2, "Départ au Milieu loin")
+    visualiser_graphe(axes[3], G1, coords1, cible1, "Départ Proche ")
 
     plt.tight_layout()
     plt.show()

@@ -1,5 +1,5 @@
 from data import MarineEnvironment
-from visuel import interactive_windy_pro
+from map import interactive_windy_pro
 import numpy as np
 
 if __name__ == "__main__":

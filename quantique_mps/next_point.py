@@ -1,7 +1,7 @@
 import networkx as nx   #type: ignore
-from quantique.ising import build_routing_ising
-from quantique.aer import resoudre_sur_aer
-from quantique.create_graphes import generer_macro_graphe
+from quantique_mps.ising import build_routing_ising
+from quantique_mps.aer import resoudre_sur_aer
+from quantique_mps.create_graphes import generer_macro_graphe
 
 def get_next_quantum_waypoint(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
 
