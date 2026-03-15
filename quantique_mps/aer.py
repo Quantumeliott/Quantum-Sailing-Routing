@@ -1,10 +1,9 @@
 import numpy as np
 from scipy.optimize import minimize
-# C'est ici qu'on importe ton bébé compilé en C++
-import mps_engine 
+import mps.engine  # type:ignore
 
 def resoudre_sur_aer(qubo_problem, reps=1, maxiter=40, max_bond_dim=64):
-    
+
     # 1. Extraction des coefficients du Hamiltonien (QUBO)
     # On récupère les poids des arêtes du graphe pour le QAOA
     hamiltonian = qubo_problem.to_ising()
@@ -19,7 +18,7 @@ def resoudre_sur_aer(qubo_problem, reps=1, maxiter=40, max_bond_dim=64):
 
         # --- APPEL AU MOTEUR C++ ---
         # On initialise ton simulateur C++
-        sim = mps_engine.Simulator(num_qubits, max_bond_dim)
+        sim = mps_engine.Simulator(num_qubits, max_bond_dim) #type:ignore
         
         # On construit le circuit QAOA directement dans le moteur C++
         # (On évite de créer des objets Qiskit lourds ici)
@@ -43,9 +42,8 @@ def resoudre_sur_aer(qubo_problem, reps=1, maxiter=40, max_bond_dim=64):
     res = minimize(objective_function, init_params, method='COBYLA', options={'maxiter': maxiter})
 
     # 4. Échantillonnage final avec les meilleurs paramètres
-    best_sim = mps_engine.Simulator(num_qubits, max_bond_dim)
-    # ... (Reconstruction du circuit avec res.x) ...
-    
+    best_sim = mps_engine.Simulator(num_qubits, max_bond_dim) #type:ignore
+  
     # On récupère le meilleur chemin (bitstring) depuis le C++
     resultat_binaire = best_sim.get_most_probable_outcome()
     
