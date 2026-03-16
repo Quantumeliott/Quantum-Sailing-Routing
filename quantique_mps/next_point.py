@@ -1,6 +1,6 @@
 import networkx as nx   #type: ignore
 from quantique_mps.ising import build_routing_ising
-from quantique_mps.aer import resoudre_sur_aer
+from quantique_mps.aer import solve_with_mps
 from quantique_mps.create_graphes import generer_macro_graphe
 
 def get_next_quantum_waypoint(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
@@ -8,7 +8,7 @@ def get_next_quantum_waypoint(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
     Gw, Gt, coords, target_id = generer_macro_graphe(env, pos_bateau, cible_finale, t)
     qp = build_routing_ising(Gw, source=0, target=target_id)
 
-    resultat_binaire = resoudre_sur_aer(qp)
+    resultat_binaire = solve_with_mps(qp)
 
     chemin_edges = []
     
@@ -29,5 +29,5 @@ def get_next_quantum_waypoint(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
 
     prochain_waypoint_coords = coords[prochain_noeud_id]
     duree_segment= Gt[0][prochain_noeud_id]['weight']
-
+    print(duree_segment)
     return prochain_waypoint_coords, t+duree_segment

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import networkx as nx #type: ignore
-from quantique_mps.next_point import generer_macro_graphe
+from quantique_oneshot.g import generer_macro_graphe
 import math 
 
 #class test

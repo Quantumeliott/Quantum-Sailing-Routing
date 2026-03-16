@@ -4,7 +4,7 @@ from matplotlib.widgets import Slider, Button
 from matplotlib.animation import FuncAnimation
 from classic.dijkstra import dijkstra
 from quantique.qaoa import simulation
-from quantique_mps.qaoa import simulation_mps
+from quantique_oneshot.qaoa import simulation_mps
 from visuel import *
 from visuel.enigme import afficher_enigme
 from visuel.finishline import finish_line
@@ -13,7 +13,7 @@ from visuel.infos import *
 from visuel.scalebar import draw_scale_bar
 
 
-def interactive_windy_pro(env, time_max=50):
+def interactive_windy_pro(env, time_max=70):
     
     fig, ax = plt.subplots(figsize=(8, 6), facecolor="#323232")
     plt.subplots_adjust(bottom=0.2, right=0.85)
@@ -74,7 +74,7 @@ def interactive_windy_pro(env, time_max=50):
         btn_answer.label.set_fontsize(10)
 
         def show_path(event):
-            print("Simulation time : approximately 1-2 minutes ...")
+            print("Simulation time : approximately 3 minutes ...")
             answer = afficher_enigme()
             title.set_text("CALCULATING PATHS...")
             title.set_color('#f1e05a') 
@@ -85,20 +85,20 @@ def interactive_windy_pro(env, time_max=50):
             noeudc, tc, tfc = dijkstra(env) 
             
             print("Lancement QAOA...")
-            #coords_q, tq, tfq = simulation(env)
+            coords_q, tq, tfq = simulation(env)
             
             print("Lancement QAOA_mps ...")
             coords_qmps, tqmps, tfqmps = simulation_mps(env)
 
             # On met les données en mémoire globale pour le slider
             race_data['waypoints_c'] = [(x, y, t) for (x, y), t in zip(env.points[noeudc], tc)]
-            #race_data['waypoints_q'] = [(x, y, t) for (x, y), t in zip(coords_q, tq)]
+            race_data['waypoints_q'] = [(x, y, t) for (x, y), t in zip(coords_q, tq)]
             race_data['waypoints_qmps'] = [(x, y, t) for (x, y), t in zip(coords_qmps, tqmps)]
 
             title.set_text("RACE : QAOA vs DIJKSTRA !")
             title.set_color('#ffffff') 
 
-            max_t = max(tfc, tfqmps)
+            max_t = max(tfc, tfqmps,tfq)
             num_frames = 150      
             time_steps = np.linspace(0, max_t, num_frames)
 
@@ -110,11 +110,11 @@ def interactive_windy_pro(env, time_max=50):
                 q.set_UVC(U_t[::step, ::step], V_t[::step, ::step])
                 
                 # Bateau Quantique
-                """xq, yq, idx_q, angle_q = get_pos_at_time(race_data['waypoints_q'], current_t)
+                xq, yq, idx_q, angle_q = get_pos_at_time(race_data['waypoints_q'], current_t)
                 trail_x_q = [wp[0] for wp in race_data['waypoints_q'][:idx_q]] + [xq]
                 trail_y_q = [wp[1] for wp in race_data['waypoints_q'][:idx_q]] + [yq]
                 trail_line_q.set_data(trail_x_q, trail_y_q)
-                update_boat(0, xq, yq, angle_q, boats)"""
+                update_boat(0, xq, yq, angle_q, boats)
 
                 # Bateau Quantique mps
                 xqmps, yqmps, idx_qmps, angle_qmps = get_pos_at_time(race_data['waypoints_qmps'], current_t)
@@ -136,7 +136,7 @@ def interactive_windy_pro(env, time_max=50):
                 slider.eventson = True
                 
                 if frame == num_frames - 1:
-                    title.set_text(f" RÉSULTATS \n Dijkstra (Orange) h : {tfc:.1f} | QAOA (Bleu) : h | MPS (Rouge) : {tfqmps:.1f} h")
+                    title.set_text(f" RÉSULTATS \n Dijkstra h : {tfc:.1f} | QAOA : {tfq:.1f} h | MPS : {tfqmps:.1f} h")
                     title.set_color("#ffffff")
                     print(answer)
                     
@@ -160,13 +160,13 @@ def interactive_windy_pro(env, time_max=50):
         q.set_UVC(U_t[::step, ::step], V_t[::step, ::step])
         title.set_text(f"LIVE WIND FORECAST - {int(t)}h{int((t%1)*60):02d}")
 
-        if race_data['waypoints_q'] is not None and race_data['waypoints_c'] is not None:
-            """# QAOA
+        if race_data['waypoints_qmps'] is not None and race_data['waypoints_c'] is not None and race_data['waypoints_q'] is not None:
+            # QAOA
             xq, yq, idx_q, angle_q = get_pos_at_time(race_data['waypoints_q'], t)
             trail_x_q = [wp[0] for wp in race_data['waypoints_q'][:idx_q]] + [xq]
             trail_y_q = [wp[1] for wp in race_data['waypoints_q'][:idx_q]] + [yq]
             trail_line_q.set_data(trail_x_q, trail_y_q)
-            update_boat(0, xq, yq, angle_q, boats)"""
+            update_boat(0, xq, yq, angle_q, boats)
 
             # Classique
             xc, yc, idx_c, angle_c = get_pos_at_time(race_data['waypoints_c'], t)

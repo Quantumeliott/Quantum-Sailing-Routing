@@ -23,7 +23,7 @@ def get_wind_at_time(self, time=0):
             self.event_y = random.uniform(45.0, 60.0)
             self.event_radius = random.uniform(17.0, 20.0)
 
-        self.event_t_start = random.uniform(3.0, 6.0)
+        self.event_t_start = random.uniform(0.0, 4.0)
         self.event_t_full = self.event_t_start + 4.0 
          
         self.event_init = True
@@ -31,7 +31,7 @@ def get_wind_at_time(self, time=0):
    # weather evolution
 
     temporal_freq_1 = 0.01
-    temporal_freq_2 = 0.03 
+    temporal_freq_2 = 0.0014 
 
     ph1 = self.base_phase1 + np.array([
         10 * np.sin(time * temporal_freq_1),

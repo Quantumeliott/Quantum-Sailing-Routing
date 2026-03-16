@@ -1,50 +1,94 @@
+import sys
+import os
 import numpy as np
 from scipy.optimize import minimize
-import mps.engine  # type:ignore
 
-def resoudre_sur_aer(qubo_problem, reps=1, maxiter=40, max_bond_dim=64):
+class MPSOptimizationResult:
+    """Classe 'déguisement' pour tromper next_point.py"""
+    def __init__(self, variables_dict):
+        self.variables_dict = variables_dict
 
-    # 1. Extraction des coefficients du Hamiltonien (QUBO)
-    # On récupère les poids des arêtes du graphe pour le QAOA
-    hamiltonian = qubo_problem.to_ising()
-    observable, offset = hamiltonian[0], hamiltonian[1]
+# --- GESTION DU CHEMIN ---
+current_dir = os.path.dirname(os.path.abspath(__file__))
+build_path = os.path.join(current_dir, "mps_engine", "build")
+if build_path not in sys.path:
+    sys.path.insert(0, build_path)
+
+try:
+    import mps_engine
+except ImportError:
+    print(f"❌ Erreur critique : Impossible de charger le moteur C++ depuis {build_path}")
+    sys.exit(1)
+
+# --- LE SOLVEUR QAOA ---
+def solve_with_mps(qubo_problem, reps=3, maxiter=500, max_bond_dim=128):
+    hamiltonian, offset = qubo_problem.to_ising()
     num_qubits = qubo_problem.get_num_vars()
 
-    # 2. Définition de la fonction de coût pour l'optimiseur classique
-    def objective_function(params):
-        # On sépare les angles gamma (cost) et beta (mixer)
-        gammas = params[:reps]
-        betas = params[reps:]
-
-        # --- APPEL AU MOTEUR C++ ---
-        # On initialise ton simulateur C++
-        sim = mps_engine.Simulator(num_qubits, max_bond_dim) #type:ignore
+    def build_circuit(gammas, betas):
+        # CORRECTION 1 : On utilise la vraie classe MPS de notre C++
+        sim = mps_engine.MPS(num_qubits, max_bond_dim)
         
-        # On construit le circuit QAOA directement dans le moteur C++
-        # (On évite de créer des objets Qiskit lourds ici)
-        for p in range(reps):
-            # Phase de coût (Problem Hamiltonian)
-            for pauli_str, coeff in observable.to_list():
-                # On applique les rotations basées sur les poids du graphe
-                sim.apply_pauli_rotation(pauli_str, gammas[p] * coeff)
+        for i in range(num_qubits):
+            sim.apply_gate("H", i)
             
-            # Phase de mélange (Mixer Hamiltonian)
+        for p in range(len(gammas)):
+            # --- TRADUCTEUR DE HAMILTONIEN DE COÛT ---
+            for pauli_str, coeff in hamiltonian.to_list():
+                # Qiskit lit de droite à gauche (le caractère le plus à droite est le qubit 0)
+                z_indices = [i for i, char in enumerate(reversed(pauli_str)) if char == 'Z']
+                angle = 2.0* gammas[p] * coeff
+                
+                if len(z_indices) == 1:
+                    # Terme linéaire (Zi) -> Une simple rotation RZ
+                    sim.apply_gate("RZ", z_indices[0], angle)
+                elif len(z_indices) == 2:
+                    # Terme quadratique (Zi Zj) -> Le sandwich CNOT-RZ-CNOT
+                    q1, q2 = z_indices[0], z_indices[1]
+                    sim.apply_cnot(q1, q2)
+                    sim.apply_gate("RZ", q2, angle)
+                    sim.apply_cnot(q1, q2)
+            
+            # --- HAMILTONIEN DE MÉLANGE ---
             for i in range(num_qubits):
                 sim.apply_gate("RX", i, 2 * betas[p])
+        return sim
 
-        # On demande au C++ de calculer l'énergie (Espérance mathématique)
-        # C'est ici que la SVD et le MPS font le gros du travail
-        energy = sim.compute_expectation(observable)
-        return energy
+    def objective_function(params):
+        gammas = params[:reps]
+        betas = params[reps:]
+        sim = build_circuit(gammas, betas)
+        
+        energy = 0.0
+        for pauli_str, coeff in hamiltonian.to_list():
+            z_indices = [i for i, char in enumerate(reversed(pauli_str)) if char == 'Z']
+            
+            # --- CORRECTION ICI : On extrait la partie réelle du coefficient Qiskit ---
+            c = float(np.real(coeff))
+            
+            if len(z_indices) == 1:
+                energy += c * sim.expectation_z(z_indices[0])
+            elif len(z_indices) == 2:
+                # Approximation Mean-Field
+                energy += c * sim.expectation_zz(z_indices[0], z_indices[1])
+                
+        # --- CORRECTION ICI : On s'assure que le retour est un pur float (réel) ---
+        return energy + float(np.real(offset))
 
-    # 3. Optimisation classique (Scipy est très robuste ici)
+    # Lancement de l'optimisation
     init_params = np.random.uniform(0, np.pi, 2 * reps)
     res = minimize(objective_function, init_params, method='COBYLA', options={'maxiter': maxiter})
 
-    # 4. Échantillonnage final avec les meilleurs paramètres
-    best_sim = mps_engine.Simulator(num_qubits, max_bond_dim) #type:ignore
+    # Reconstruction finale
+    best_sim = build_circuit(res.x[:reps], res.x[reps:])
   
-    # On récupère le meilleur chemin (bitstring) depuis le C++
-    resultat_binaire = best_sim.get_most_probable_outcome()
+    # On récupère les valeurs binaires du C++
+    result_array = [1 if best_sim.expectation_z(i) < 0 else 0 for i in range(num_qubits)]
     
-    return resultat_binaire
+    # On recrée le dictionnaire attendu par le reste de ton projet
+    var_dict = {}
+    for i, var in enumerate(qubo_problem.variables):
+        var_dict[var.name] = result_array[i]
+        
+    # On renvoie notre faux objet Qiskit
+    return MPSOptimizationResult(var_dict)
