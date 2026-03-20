@@ -6,7 +6,8 @@ namespace mps {
 
 class Node {
 public:
-    Eigen::MatrixXcd A[2]; // A[0] pour |0>, A[1] pour |1>
+    // |node> = A[0] |0> + A[1] |1>
+    Eigen::MatrixXcd A[2]; 
 
     Node();
     Node(const Eigen::MatrixXcd& m0, const Eigen::MatrixXcd& m1);

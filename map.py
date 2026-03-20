@@ -4,7 +4,7 @@ from matplotlib.widgets import Slider, Button
 from matplotlib.animation import FuncAnimation
 from classic.dijkstra import dijkstra
 from quantique.qaoa import simulation
-from quantique_oneshot.qaoa import simulation_mps
+from quantique_mps.qaoa import simulation_mps
 from visuel import *
 from visuel.enigme import afficher_enigme
 from visuel.finishline import finish_line

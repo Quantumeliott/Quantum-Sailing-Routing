@@ -10,6 +10,7 @@ def simulation_mps(env):
     while math.hypot(83.7 - chemin[-1][0], 96 - chemin[-1][1]) > 2.0:
         prochain_waypoint, t_next = get_next_quantum_waypoint(env, chemin[-1], cible_finale=(83.7, 96), t=time_register[-1])
         chemin.append(prochain_waypoint)
+        print(prochain_waypoint)
         time_register.append(t_next)
         i += 1
         

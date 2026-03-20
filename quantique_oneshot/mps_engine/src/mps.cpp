@@ -5,17 +5,17 @@
 
 namespace mps {
 
-// --- 1. CONSTRUCTEUR ---
+// Constructor 
 MPS::MPS(int n, int chi_max) : num_qubits(n), max_bond_dim(chi_max) {
     Eigen::MatrixXcd m0(1, 1); m0(0,0) = 1.0;
     Eigen::MatrixXcd m1(1, 1); m1(0,0) = 0.0;
-
+    // Initialization of all qubits
     for(int i=0; i<n; ++i) {
         nodes.emplace_back(m0, m1);
     }
 }
 
-// --- 2. PORTES À 1 QUBIT ---
+// One quibt gate
 void MPS::apply_gate(const std::string& name, int target, double theta) {
     if (target < 0 || target >= num_qubits) return;
 
@@ -25,17 +25,9 @@ void MPS::apply_gate(const std::string& name, int target, double theta) {
     else if (name == "RZ") nodes[target].apply_1q_gate(Gates::RZ(theta));
 }
 
-// --- 3. UTILITAIRE ---
-void MPS::print_dimensions() const {
-    for(int i=0; i<num_qubits; ++i) {
-        std::cout << "[" << nodes[i].left_dim() << "x" << nodes[i].right_dim() << "] ";
-    }
-    std::cout << std::endl;
-}
-
-// --- 4. PORTE CNOT (AVEC SVD & COMPRESSION) ---
+// CNOT
 void MPS::apply_cnot(int i, int j) {
-    if (std::abs(i - j) != 1) return; // Uniquement voisins pour l'instant
+    if (std::abs(i - j) != 1) return; //linear geometry
 
     int left = std::min(i, j);
     int right = std::max(i, j);
@@ -51,6 +43,9 @@ void MPS::apply_cnot(int i, int j) {
         }
     }
 
+    // On choisit la matrice selon la direction demandée
+    const Eigen::Matrix4cd& cnot_matrix = (i < j) ? Gates::CNOT : Gates::CNOT_REV;
+
     // Application du CNOT
     Eigen::MatrixXcd theta_prime = Eigen::MatrixXcd::Zero(2 * chiL, 2 * chiR);
     for (int a = 0; a < 2; ++a) {
@@ -58,7 +53,7 @@ void MPS::apply_cnot(int i, int j) {
             for (int sL = 0; sL < 2; ++sL) {
                 for (int sR = 0; sR < 2; ++sR) {
                     theta_prime.block(a * chiL, b * chiR, chiL, chiR) += 
-                        Gates::CNOT(a * 2 + b, sL * 2 + sR) * theta.block(sL * chiL, sR * chiR, chiL, chiR);
+                        cnot_matrix(a * 2 + b, sL * 2 + sR) * theta.block(sL * chiL, sR * chiR, chiL, chiR);
                 }
             }
         }
@@ -80,13 +75,8 @@ void MPS::apply_cnot(int i, int j) {
     Eigen::MatrixXcd SV = S.head(new_chi).asDiagonal() * V.block(0, 0, new_chi, 2 * chiR);
     nodes[right].A[0] = SV.block(0, 0, new_chi, chiR);
     nodes[right].A[1] = SV.block(0, chiR, new_chi, chiR);
-
-    nodes[left].normalize();
-    nodes[right].normalize();
 }
-// =========================================================================
-// CALCULS DES VALEURS D'ATTENTE (EXACTES VIA CONTRACTION EIGEN)
-// =========================================================================
+
 
 double MPS::compute_expectation_z(int target) {
     if (target < 0 || target >= num_qubits) return 0.0;
@@ -183,11 +173,10 @@ void MPS::apply_swap(int i) {
     nodes[left].A[0] = U.block(0, 0, chiL, new_chi);
     nodes[left].A[1] = U.block(chiL, 0, chiL, new_chi);
 
+    
     Eigen::MatrixXcd SV = S.head(new_chi).asDiagonal() * V.block(0, 0, new_chi, 2 * chiR);
     nodes[right].A[0] = SV.block(0, 0, new_chi, chiR);
     nodes[right].A[1] = SV.block(0, chiR, new_chi, chiR);
 
-    nodes[left].normalize();
-    nodes[right].normalize();
 }
 }

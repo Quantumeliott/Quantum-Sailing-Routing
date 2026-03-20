@@ -34,7 +34,7 @@ def build_routing_ising(graph: nx.DiGraph, source: int, target: int, penalty_fac
     if penalty_factor is None:
         all_weights = [graph.edges[u, v]['weight'] for u, v in graph.edges()]
         max_w = max(all_weights) if all_weights else 1.0
-        penalty_factor = max_w * 3.0 
+        penalty_factor = max_w * 10.0 
 
     # résultat
     lineq2penalty = LinearEqualityToPenalty(penalty=penalty_factor)

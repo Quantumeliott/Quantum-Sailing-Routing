@@ -17,14 +17,12 @@ public:
 
     void apply_gate(const std::string& name, int target, double theta = 0.0);
     
-    // On garde ça pour l'étape suivante (SVD)
     void apply_cnot(int control, int target);
 
-    int get_num_qubits() const { return num_qubits; }
-    void print_dimensions() const;
-
     double compute_expectation_z(int target);
+
     double compute_expectation_zz(int q1, int q2);
+
     void apply_swap(int i);
 };
 

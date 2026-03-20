@@ -39,7 +39,7 @@ def generer_macro_graphe(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
             # Si vitesse < 3 nds, on applique une pénalité qui croît très vite.
             # On utilise la formule : Penalty = (Seuil / Vitesse)^2
             if vitesse < 3.0:
-                penalty += (3.0 / (vitesse + 0.1))**2 * 20.0
+                min((3.0 / (vitesse + 0.1))**2 * 20.0, 50.0)
                 
             total_time += step_t
 
@@ -47,12 +47,12 @@ def generer_macro_graphe(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
         
         # Le poids final combine le temps réel et la pénalité de lenteur
         # On multiplie par (1.1 - efficacite) pour garder l'aspect directionnel
-        weight = (total_time + penalty) * (1.1 - 0.2 * efficacite)
+        weight = (total_time + penalty) * (1.1 - 0.7 * efficacite)
             
-        return total_time, max(0.01, weight / 10.0)
+        return total_time, max(0.01, weight / 4.0)
     
     # --- GRAPHE DE PROXIMITÉ (15 Qubits - Approche fine 4x4) ---
-    if dist_totale < 15.0:
+    if dist_totale < 8.0:
         dist_1 = dist_totale * 0.40  # 1ère couche à 40% de la distance
         dist_2 = dist_totale * 0.75  # 2ème couche à 75% de la distance
         
@@ -103,16 +103,14 @@ def generer_macro_graphe(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
         dist_limite = min(dist_totale, 40.0)
         
         dist_1 = dist_limite * 0.25
-        dist_2 = dist_limite * 0.55
-        dist_3 = dist_limite * 0.85 # Dernière couche de noeuds à 85% des 40 unités
+        dist_2 = dist_limite * 0.65
         
         # 2. ON OUVRE LES ANGLES : pi/3 (60°) pour que le bateau puisse s'écarter de l'axe
         ecart_1 = math.pi / 4.5
         ecart_2 = math.pi / 3.5
-        ecart_3 = math.pi / 3 
         
-        c1_nodes, c2_nodes, c3_nodes = [1,2,3,4], [5,6,7,8,9,10], [11,12,13,14]
-        cible_noeud = 15
+        c1_nodes, c2_nodes = [1,2,3,4], [5,6,7,8,9,10]
+        cible_noeud = 11
 
         # Placement des couches
         for i, n in enumerate(c1_nodes):
@@ -121,9 +119,6 @@ def generer_macro_graphe(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
         for i, n in enumerate(c2_nodes):
             a = angle + (i - 2.5) * (ecart_2/2.5)
             coords[n] = (clamp(x0 + dist_2 * math.cos(a)), clamp(y0 + dist_2 * math.sin(a)))
-        for i, n in enumerate(c3_nodes):
-            a = angle + (i - 1.5) * ecart_3
-            coords[n] = (clamp(x0 + dist_3 * math.cos(a)), clamp(y0 + dist_3 * math.sin(a)))
 
         # 3. LA CIBLE DEVIENT UN "PUITS" : On lui donne la position de la cible réelle 
         # pour l'affichage, mais on va rendre le trajet vers elle GRATUIT.
@@ -139,17 +134,11 @@ def generer_macro_graphe(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
             t_reel, w_qaoa = get_weight(u, v)
             Gw.add_edge(u, v, weight=w_qaoa); Gt.add_edge(u, v, weight=t_reel)
             if v not in eta or eta[u] + t_reel < eta[v]: eta[v] = eta[u] + t_reel
-
-        edges_c2_c3 = [(5,11), (5,12), (6,11), (6,12), (6,13), (7,11), (7,12), (7,13), (8,12), (8,13), (8,14), (9,12), (9,13), (9,14), (10,13), (10,14)]
-        for u, v in edges_c2_c3:
-            t_reel, w_qaoa = get_weight(u, v)
-            Gw.add_edge(u, v, weight=w_qaoa); Gt.add_edge(u, v, weight=t_reel)
-            if v not in eta or eta[u] + t_reel < eta[v]: eta[v] = eta[u] + t_reel
             
         # 4. LE FINAL GRATUIT (C3 -> Cible)
         # On met le poids à 0. Le QAOA choisira le noeud de C3 (11, 12, 13, 14) 
         # qui a été le plus rapide et efficace jusqu'ici.
-        for n in c3_nodes:
+        for n in c2_nodes:
             Gw.add_edge(n, cible_noeud, weight=0.0) 
             Gt.add_edge(n, cible_noeud, weight=0.1) # Temps symbolique pour la simu
             

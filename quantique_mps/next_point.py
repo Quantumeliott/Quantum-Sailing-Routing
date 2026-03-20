@@ -25,9 +25,8 @@ def get_next_quantum_waypoint(env, pos_bateau, cible_finale=(83.7, 96), t=0.0):
             break
 
     if prochain_noeud_id == 0:
-        prochain_noeud_id = 2
+        prochain_noeud_id = min(Gw.successors(0), key=lambda v: Gw[0][v]['weight'])
 
     prochain_waypoint_coords = coords[prochain_noeud_id]
     duree_segment= Gt[0][prochain_noeud_id]['weight']
-    print(duree_segment)
     return prochain_waypoint_coords, t+duree_segment

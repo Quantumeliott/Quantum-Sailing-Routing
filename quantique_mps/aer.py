@@ -21,7 +21,7 @@ except ImportError:
     sys.exit(1)
 
 # --- LE SOLVEUR QAOA ---
-def solve_with_mps(qubo_problem, reps=3, maxiter=500, max_bond_dim=128):
+def solve_with_mps(qubo_problem, reps=1, maxiter=50, max_bond_dim=16):
     hamiltonian, offset = qubo_problem.to_ising()
     num_qubits = qubo_problem.get_num_vars()
 
@@ -37,17 +37,41 @@ def solve_with_mps(qubo_problem, reps=3, maxiter=500, max_bond_dim=128):
             for pauli_str, coeff in hamiltonian.to_list():
                 # Qiskit lit de droite à gauche (le caractère le plus à droite est le qubit 0)
                 z_indices = [i for i, char in enumerate(reversed(pauli_str)) if char == 'Z']
-                angle = 2.0* gammas[p] * coeff
+                angle = 2.0* gammas[p] * float(np.real(coeff))
                 
                 if len(z_indices) == 1:
                     # Terme linéaire (Zi) -> Une simple rotation RZ
                     sim.apply_gate("RZ", z_indices[0], angle)
                 elif len(z_indices) == 2:
-                    # Terme quadratique (Zi Zj) -> Le sandwich CNOT-RZ-CNOT
                     q1, q2 = z_indices[0], z_indices[1]
-                    sim.apply_cnot(q1, q2)
-                    sim.apply_gate("RZ", q2, angle)
-                    sim.apply_cnot(q1, q2)
+                    
+                    # 1. Si les qubits sont déjà voisins, on fait le sandwich normal
+                    if abs(q1 - q2) == 1:
+                        sim.apply_cnot(q1, q2)
+                        sim.apply_gate("RZ", q2, angle)
+                        sim.apply_cnot(q1, q2)
+                    else:
+                        # 2. S'ils sont éloignés, on déplace q1 jusqu'à q2
+                        step = 1 if q1 < q2 else -1
+                        path = list(range(q1, q2, step))
+                        
+                        # --- VOYAGE ALLER (SWAPs) ---
+                        for i in range(len(path) - 1):
+                            left_qubit = min(path[i], path[i+1])
+                            sim.apply_swap(left_qubit)
+                            
+                        # q1 est maintenant juste à côté de q2 !
+                        current_q1 = path[-1] 
+                        
+                        # --- LE SANDWICH PHYSIQUE ---
+                        sim.apply_cnot(current_q1, q2)
+                        sim.apply_gate("RZ", q2, angle)
+                        sim.apply_cnot(current_q1, q2)
+                        
+                        # --- VOYAGE RETOUR (SWAPs inverses) ---
+                        for i in range(len(path) - 2, -1, -1):
+                            left_qubit = min(path[i], path[i+1])
+                            sim.apply_swap(left_qubit)
             
             # --- HAMILTONIEN DE MÉLANGE ---
             for i in range(num_qubits):
