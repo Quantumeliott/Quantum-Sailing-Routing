@@ -1,32 +1,36 @@
-# Quantum Sailboat Routing: QAOA vs. Dijkstra 
+#  Quantum Sailing Routing/Race
 
+This project is my first big step into quantum computing and the Quantum Approximate Optimization Algorithm (QAOA)! 
 
-## Project Overview
+My goal was to build a QAOA from scratch and optimize it to create the best possible routing algorithm. My idea was to create a sailboat race with a visual rendering (you can see a simulation in the `output.mp4` video) and complex, dynamic weather. To measure the performance of the algorithms, we organize a race between the boats, and the best one wins!
 
-Navigating a sailboat efficiently requires constantly adapting to dynamic wind fields (speed and direction). This project simulates a live weather environment where two algorithms race to find the fastest route to a destination :
+##  The Three Participants
 
-* **The Classical Approach (Dijkstra):** Acts as a global optimizer. It computes the entire journey at t=0, perfectly anticipating future weather changes across the entire map.
+* 🔵 **Classique (Dijkstra)**: Always the fastest one (as Dijkstra is mathematically perfect for this kind of problem). It acts as the ultimate baseline for our routing solutions.
+* 🟠 **Quantum (QAOA Standard)**: Our first hybrid algorithm using Qiskit's standard statevector simulation.
+* 🔴 **Quantum_mps**: Our second hybrid algorithm, powered by a custom C++ Matrix Product State (MPS) engine.
 
-* **The Quantum Approach (QAOA):** Acts as a local, receding-horizon optimizer. Due to current hardware and simulation constraints regarding the number of qubits, the QAOA generates a localized "macro-graph" at each step. It solves a smaller QUBO (Quadratic Unconstrained Binary Optimization) problem to determine its immediate optimal heading.
+## Project Logbook / Feedback
 
-##  Key Features
+I began by creating the visual environment, the dynamic weather, and all the UI elements you can see in the video. Then, I programmed the Dijkstra algorithm, which wasn't too difficult as it is a very standard approach for this type of pathfinding problem.
 
-* **Dynamic Wind Simulation:** Real-time generation of wind fields using animated noise layers (Synoptic weather patterns).
-* **Quantum Simulation:** Custom QAOA implementation using IBM's Qiskit `StatevectorSampler` and `COBYLA` optimizer, featuring on-the-fly circuit transpilation to bypass matrix bottlenecks.
-* **Interactive UI:** A custom Matplotlib-based dashboard featuring a time-synced animated race between the classical and quantum boats, complete with CPU computation times and simulated race times.
-* **Replay Mode:** A time-slider allows users to review the race frame-by-frame and analyze algorithmic decision-making.
+Next, I started thinking about the QAOA architecture: how to model the problem with the Ising model to get a Hamiltonian to minimize, how to actually minimize it, and especially how to be efficient when limited to only 15 qubits (representing the path). Using standard quantum libraries like Qiskit felt a bit limiting because built-in functions (like the statevector simulator) hide the underlying complexity and hit a hardware wall very quickly.
 
-## Limits
-My goal was to optimize a maximum the QAOA so that he could compete with dijkstra but the limits of qubits is extremely restrictive. I had to choose to create graphs that had a large vision but were not precise at all (big segments), or graphs that were precise but could not anticipate a no-wind zone. The result is a mix between the two, the boat can escape front wind but often fall into the no-wind zone.
+So, I decided to dive into the deep end. This allowed me to truly understand how everything works under the hood and to break the qubit limit barrier: I created a C++ quantum engine from scratch.
 
-##  Getting Started
+**The Tensor Network Revolution:**
+To bypass the memory limitations of standard simulators, we abandoned naive simulation and coded **our own C++ quantum engine based on Matrix Product States (MPS)**.
+* Instead of storing the entire quantum universe, the engine "compresses" entanglement on the fly using advanced mathematics (SVD).
+* The Python code handles **dynamic routing** by inserting `SWAP` gates on the fly to adapt the geographical graph to the 1D topology of the C++ engine.
+* **Result:** The boat can simulate giant graphs on a simple laptop and make long-term strategic decisions!
+
+The new challenge is balancing the size of the graphs, the ability of the classical optimizer (COBYLA) to find the right path, and the computation time. Now our boat has a much broader vision, even if the quantum noise sometimes makes it choose surprising paths.
+
+## How to run the race?
 
 ### Prerequisites
-To run the project you just have to execute the main file and to download the following
-libraries.
-Ensure you have Python 3 installed along with the required scientific and quantum libraries:
- 
+Make sure you have Python 3.x, a C++ compiler (GCC/Clang), and CMake installed on your machine.
 
+First, install the required Python dependencies:
 ```bash
-pip install numpy pandas matplotlib networkx qiskit qiskit-algorithms qiskit-optimization scipy
-
+pip install numpy pandas matplotlib networkx qiskit qiskit-algorithms qiskit-optimization scipy pybind11 pygame
